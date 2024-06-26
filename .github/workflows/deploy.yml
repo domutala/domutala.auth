@@ -1,0 +1,36 @@
+name: Deploy
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: executing remote ssh commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.FOLDER }}/${{ github.ref_name }}
+            sudo git pull
+
+            # install dependencies
+            yarn
+
+            # Créer un fichier .env et y ajouter les secrets
+
+            ENV_FILE_CONTENT="${{ secrets.API__DEV_ENV_FILE }}"
+
+            sudo rm -f .env
+            echo "$ENV_FILE_CONTENT" > .env
+
+            # build
+            yarn build
+
+            sudo systemctl restart ${{ github.ref_name }}.domutala.auth.service
